@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -12,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func New(cfg *config.Config, log *zap.Logger) *echo.Echo {
+func New(cfg *config.Config, log *zap.Logger, readinessChecks ...func(ctx context.Context) error) *echo.Echo {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
@@ -26,7 +27,7 @@ func New(cfg *config.Config, log *zap.Logger) *echo.Echo {
 	e.Server.ReadTimeout = cfg.Server.ReadTimeout
 	e.Server.WriteTimeout = cfg.Server.WriteTimeout
 
-	health := handler.NewHealth()
+	health := handler.NewHealth(readinessChecks...)
 
 	e.GET("/health", health.Liveness)
 	e.GET("/ready", health.Readiness)

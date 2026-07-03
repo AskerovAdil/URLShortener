@@ -1,0 +1,11 @@
+.git
+.gitignore
+bin/
+*.exe
+*.test
+*.out
+coverage.*
+.env
+configs/config.yaml
+README.md
+deployments/docker-compose.yml

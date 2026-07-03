@@ -4,13 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/AskerovAdil/URLShortener/internal/cache/redis"
 	"github.com/AskerovAdil/URLShortener/internal/config"
+	"github.com/AskerovAdil/URLShortener/internal/repository/postgres"
 	"github.com/AskerovAdil/URLShortener/internal/server"
-	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -27,15 +29,32 @@ func Run(configPath string) error {
 	}
 	defer func() { _ = log.Sync() }()
 
-	e := server.New(cfg, log)
+	ctx := context.Background()
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	pg, err := postgres.Open(ctx, cfg.Postgres)
+	if err != nil {
+		return err
+	}
+	defer pg.Close()
+
+	rdb, err := redis.Open(ctx, cfg.Redis)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = rdb.Close() }()
+
+	e := server.New(cfg, log,
+		func(c context.Context) error { return pg.Ping(c) },
+		func(c context.Context) error { return rdb.Ping(c).Err() },
+	)
+
+	runCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	errCh := make(chan error, 1)
 	go func() {
 		log.Info("server starting", zap.String("addr", cfg.Server.Addr()))
-		if err := e.Start(cfg.Server.Addr()); err != nil && !errors.Is(err, echo.ErrServerClosed) {
+		if err := e.Start(cfg.Server.Addr()); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
 		close(errCh)
@@ -46,7 +65,7 @@ func Run(configPath string) error {
 		if err != nil {
 			return fmt.Errorf("server error: %w", err)
 		}
-	case <-ctx.Done():
+	case <-runCtx.Done():
 		log.Info("shutdown signal received")
 	}
 
