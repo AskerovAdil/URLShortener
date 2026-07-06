@@ -11,8 +11,11 @@ import (
 
 	"github.com/AskerovAdil/URLShortener/internal/cache/redis"
 	"github.com/AskerovAdil/URLShortener/internal/config"
+	"github.com/AskerovAdil/URLShortener/internal/migrate"
 	"github.com/AskerovAdil/URLShortener/internal/repository/postgres"
 	"github.com/AskerovAdil/URLShortener/internal/server"
+	"github.com/AskerovAdil/URLShortener/internal/server/handler"
+	"github.com/AskerovAdil/URLShortener/internal/service"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -37,16 +40,36 @@ func Run(configPath string) error {
 	}
 	defer pg.Close()
 
+	if cfg.Migrations.RunOnStartup {
+		log.Info("running migrations", zap.String("path", cfg.Migrations.Path))
+		if err := migrate.Up(cfg.Postgres.MigrateDSN(), cfg.Migrations.Path); err != nil {
+			return fmt.Errorf("migrations: %w", err)
+		}
+	}
+
 	rdb, err := redis.Open(ctx, cfg.Redis)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = rdb.Close() }()
 
-	e := server.New(cfg, log,
-		func(c context.Context) error { return pg.Ping(c) },
-		func(c context.Context) error { return rdb.Ping(c).Err() },
-	)
+	userRepo := postgres.NewUserRepo(pg)
+
+	authSvc, err := service.NewAuthService(userRepo, cfg.JWT.Secret, cfg.JWT.TTL)
+	if err != nil {
+		return fmt.Errorf("init auth: %w", err)
+	}
+
+	authHandler := handler.NewAuth(authSvc)
+
+	e := server.New(cfg, log, server.Deps{
+		Auth:        authHandler,
+		AuthService: authSvc,
+		ReadinessChecks: []func(context.Context) error{
+			func(c context.Context) error { return pg.Ping(c) },
+			func(c context.Context) error { return rdb.Ping(c).Err() },
+		},
+	})
 
 	runCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

@@ -21,3 +21,11 @@ redis:
   addr: localhost:6379
   password: ""
   db: 0
+
+migrations:
+  path: migrations
+  run_on_startup: true
+
+jwt:
+  secret: dev-secret-change-me-in-production-32chars
+  ttl: 24h

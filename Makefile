@@ -1,4 +1,4 @@
-.PHONY: run build test tidy docker-up docker-down docker-logs
+.PHONY: run build test tidy migrate-up migrate-down docker-up docker-down docker-logs
 
 run:
 	go run ./cmd/api
@@ -11,6 +11,12 @@ test:
 
 tidy:
 	go mod tidy
+
+migrate-up:
+	go run ./cmd/migrate -direction up
+
+migrate-down:
+	go run ./cmd/migrate -direction down
 
 docker-up:
 	docker compose -f deployments/docker-compose.yml up --build -d

@@ -19,6 +19,7 @@ WORKDIR /app
 
 COPY --from=builder /api .
 COPY configs/config.example.yaml ./configs/config.yaml
+COPY migrations ./migrations
 
 EXPOSE 8080
 

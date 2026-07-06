@@ -9,10 +9,12 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Log      LogConfig      `mapstructure:"log"`
-	Postgres PostgresConfig `mapstructure:"postgres"`
-	Redis    RedisConfig    `mapstructure:"redis"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Log        LogConfig        `mapstructure:"log"`
+	Postgres   PostgresConfig   `mapstructure:"postgres"`
+	Redis      RedisConfig      `mapstructure:"redis"`
+	Migrations MigrationsConfig `mapstructure:"migrations"`
+	JWT        JWTConfig        `mapstructure:"jwt"`
 }
 
 type ServerConfig struct {
@@ -48,10 +50,28 @@ func (p PostgresConfig) DSN() string {
 	)
 }
 
+// MigrateDSN — golang-migrate pgx/v5 driver expects pgx5:// scheme.
+func (p PostgresConfig) MigrateDSN() string {
+	return fmt.Sprintf(
+		"pgx5://%s:%s@%s:%d/%s?sslmode=%s",
+		p.User, p.Password, p.Host, p.Port, p.Database, p.SSLMode,
+	)
+}
+
 type RedisConfig struct {
 	Addr     string `mapstructure:"addr"`
 	Password string `mapstructure:"password"`
 	DB       int    `mapstructure:"db"`
+}
+
+type MigrationsConfig struct {
+	Path         string `mapstructure:"path"`
+	RunOnStartup bool   `mapstructure:"run_on_startup"`
+}
+
+type JWTConfig struct {
+	Secret string        `mapstructure:"secret"`
+	TTL    time.Duration `mapstructure:"ttl"`
 }
 
 func Load(path string) (*Config, error) {
@@ -73,6 +93,10 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("redis.addr", "localhost:6379")
 	v.SetDefault("redis.password", "")
 	v.SetDefault("redis.db", 0)
+	v.SetDefault("migrations.path", "migrations")
+	v.SetDefault("migrations.run_on_startup", true)
+	v.SetDefault("jwt.secret", "dev-secret-change-me-in-production-32chars")
+	v.SetDefault("jwt.ttl", 24*time.Hour)
 
 	if path != "" {
 		v.SetConfigFile(path)
