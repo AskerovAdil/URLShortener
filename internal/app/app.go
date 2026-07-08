@@ -62,8 +62,14 @@ func Run(configPath string) error {
 
 	authHandler := handler.NewAuth(authSvc)
 
+	urlRepo := postgres.NewURLRepo(pg)
+	urlCache := redis.NewURLCache(rdb, cfg.Cache.URLTTL)
+	urlSvc := service.NewURLService(urlRepo, urlCache, cfg.Cache.URLTTL)
+	urlHandler := handler.NewURL(urlSvc, cfg.App.BaseURL)
+
 	e := server.New(cfg, log, server.Deps{
 		Auth:        authHandler,
+		URL:         urlHandler,
 		AuthService: authSvc,
 		ReadinessChecks: []func(context.Context) error{
 			func(c context.Context) error { return pg.Ping(c) },

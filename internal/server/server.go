@@ -16,9 +16,10 @@ import (
 )
 
 type Deps struct {
-	Auth             *handler.Auth
-	AuthService      *service.AuthService
-	ReadinessChecks  []func(ctx context.Context) error
+	Auth            *handler.Auth
+	URL             *handler.URL
+	AuthService     *service.AuthService
+	ReadinessChecks []func(ctx context.Context) error
 }
 
 func New(cfg *config.Config, log *zap.Logger, deps Deps) *echo.Echo {
@@ -49,6 +50,11 @@ func New(cfg *config.Config, log *zap.Logger, deps Deps) *echo.Echo {
 	protected := v1.Group("")
 	protected.Use(authmw.JWT(deps.AuthService))
 	protected.GET("/me", deps.Auth.Me)
+	protected.POST("/urls", deps.URL.Create)
+	protected.GET("/urls", deps.URL.List)
+	protected.DELETE("/urls/:alias", deps.URL.Delete)
+
+	e.GET("/:alias", deps.URL.Redirect)
 
 	return e
 }

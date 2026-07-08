@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,6 +16,12 @@ const (
 )
 
 var aliasPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+var reservedAliases = map[string]struct{}{
+	"health": {},
+	"ready":  {},
+	"api":    {},
+}
 
 type URL struct {
 	ID          uuid.UUID
@@ -31,6 +38,9 @@ func ValidateAlias(alias string) error {
 	}
 	if !aliasPattern.MatchString(alias) {
 		return fmt.Errorf("%w: alias has invalid characters", ErrInvalidInput)
+	}
+	if _, ok := reservedAliases[strings.ToLower(alias)]; ok {
+		return fmt.Errorf("%w: alias is reserved", ErrInvalidInput)
 	}
 	return nil
 }

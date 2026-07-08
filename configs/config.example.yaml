@@ -9,6 +9,9 @@ log:
   level: debug
   development: true
 
+app:
+  base_url: http://localhost:8080
+
 postgres:
   host: localhost
   port: 5432
@@ -21,6 +24,9 @@ redis:
   addr: localhost:6379
   password: ""
   db: 0
+
+cache:
+  url_ttl: 1h
 
 migrations:
   path: migrations

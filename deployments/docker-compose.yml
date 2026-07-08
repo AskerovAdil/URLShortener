@@ -15,6 +15,7 @@ services:
       URLSHORTENER_POSTGRES_DATABASE: urlshortener
       URLSHORTENER_POSTGRES_SSL_MODE: disable
       URLSHORTENER_REDIS_ADDR: redis:6379
+      URLSHORTENER_APP_BASE_URL: http://localhost:8080
       URLSHORTENER_MIGRATIONS_RUN_ON_STARTUP: "true"
       URLSHORTENER_JWT_SECRET: dev-secret-change-me-in-production-32chars
     depends_on:

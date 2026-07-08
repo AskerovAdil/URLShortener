@@ -11,8 +11,10 @@ import (
 type Config struct {
 	Server     ServerConfig     `mapstructure:"server"`
 	Log        LogConfig        `mapstructure:"log"`
+	App        AppConfig        `mapstructure:"app"`
 	Postgres   PostgresConfig   `mapstructure:"postgres"`
 	Redis      RedisConfig      `mapstructure:"redis"`
+	Cache      CacheConfig      `mapstructure:"cache"`
 	Migrations MigrationsConfig `mapstructure:"migrations"`
 	JWT        JWTConfig        `mapstructure:"jwt"`
 }
@@ -32,6 +34,10 @@ func (s ServerConfig) Addr() string {
 type LogConfig struct {
 	Level       string `mapstructure:"level"`
 	Development bool   `mapstructure:"development"`
+}
+
+type AppConfig struct {
+	BaseURL string `mapstructure:"base_url"`
 }
 
 type PostgresConfig struct {
@@ -64,6 +70,10 @@ type RedisConfig struct {
 	DB       int    `mapstructure:"db"`
 }
 
+type CacheConfig struct {
+	URLTTL time.Duration `mapstructure:"url_ttl"`
+}
+
 type MigrationsConfig struct {
 	Path         string `mapstructure:"path"`
 	RunOnStartup bool   `mapstructure:"run_on_startup"`
@@ -84,6 +94,7 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("server.shutdown_timeout", 15*time.Second)
 	v.SetDefault("log.level", "info")
 	v.SetDefault("log.development", false)
+	v.SetDefault("app.base_url", "http://localhost:8080")
 	v.SetDefault("postgres.host", "localhost")
 	v.SetDefault("postgres.port", 5432)
 	v.SetDefault("postgres.user", "urlshortener")
@@ -93,6 +104,7 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("redis.addr", "localhost:6379")
 	v.SetDefault("redis.password", "")
 	v.SetDefault("redis.db", 0)
+	v.SetDefault("cache.url_ttl", time.Hour)
 	v.SetDefault("migrations.path", "migrations")
 	v.SetDefault("migrations.run_on_startup", true)
 	v.SetDefault("jwt.secret", "dev-secret-change-me-in-production-32chars")
